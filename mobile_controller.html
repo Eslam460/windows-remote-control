@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التحكم في Windows</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f6fa;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background-color: #3498db;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .button.danger {
+            background-color: #e74c3c;
+        }
+        .button.danger:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>التحكم في Windows</h1>
+        <button class="button danger" onclick="sendCommand('shutdown')">إيقاف تشغيل الجهاز</button>
+        <button class="button" onclick="sendCommand('restart')">إعادة تشغيل الجهاز</button>
+        <button class="button" onclick="sendCommand('lock')">قفل الجهاز</button>
+    </div>
+
+    <script>
+        // تكوين Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjjOAoVDLih9mAy6BSSmtghHTOV3TkGLg",
+            authDomain: "pcandfon.firebaseapp.com",
+            databaseURL: "https://pcandfon-default-rtdb.firebaseio.com",
+            projectId: "pcandfon",
+            storageBucket: "pcandfon.firebasestorage.app",
+            messagingSenderId: "1063272939698",
+            appId: "1:1063272939698:web:2aec7f3b1c3ec5efb809ab",
+            measurementId: "G-LVBGZ3Z2FS"
+        };
+
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        function sendCommand(command) {
+            if (confirm('هل أنت متأكد من تنفيذ هذا الأمر؟')) {
+                const newCommand = database.ref('commands').push();
+                newCommand.set({
+                    command: command,
+                    timestamp: Date.now(),
+                    executed: false
+                });
+            }
+        }
+    </script>
+</body>
+</html>
