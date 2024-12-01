@@ -63,6 +63,14 @@
             background-color: #f8f9fa;
             color: #666;
         }
+        .error {
+            color: #e74c3c;
+            background-color: #fde8e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -72,6 +80,7 @@
         <button class="button" onclick="sendCommand('restart')">إعادة تشغيل الجهاز</button>
         <button class="button" onclick="sendCommand('lock')">قفل الجهاز</button>
         <div class="status" id="status"></div>
+        <div class="error" id="error"></div>
     </div>
 
     <script>
@@ -91,27 +100,56 @@
         const database = firebase.database();
         
         function updateStatus(message) {
-            document.getElementById('status').textContent = message;
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.style.display = 'block';
             setTimeout(() => {
-                document.getElementById('status').textContent = '';
+                statusElement.style.display = 'none';
             }, 3000);
         }
 
-        function sendCommand(command) {
-            if (confirm('هل أنت متأكد من تنفيذ هذا الأمر؟')) {
-                const newCommand = database.ref('commands').push();
-                newCommand.set({
-                    command: command,
-                    timestamp: Date.now(),
-                    executed: false
-                }).then(() => {
-                    updateStatus('تم إرسال الأمر بنجاح');
-                }).catch(error => {
-                    updateStatus('حدث خطأ في إرسال الأمر');
-                    console.error(error);
-                });
+        function showError(error) {
+            const errorElement = document.getElementById('error');
+            errorElement.textContent = 'خطأ: ' + error.message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+
+        async function testDatabaseConnection() {
+            try {
+                const testRef = database.ref('.info/connected');
+                const snapshot = await testRef.once('value');
+                if (snapshot.val() === true) {
+                    updateStatus('متصل بقاعدة البيانات');
+                } else {
+                    throw new Error('غير متصل بقاعدة البيانات');
+                }
+            } catch (error) {
+                showError(error);
             }
         }
+
+        async function sendCommand(command) {
+            if (confirm('هل أنت متأكد من تنفيذ هذا الأمر؟')) {
+                try {
+                    const newCommand = database.ref('commands').push();
+                    await newCommand.set({
+                        command: command,
+                        timestamp: Date.now(),
+                        executed: false
+                    });
+                    updateStatus('تم إرسال الأمر بنجاح');
+                } catch (error) {
+                    showError(error);
+                    console.error('Error details:', error);
+                }
+            }
+        }
+
+        // اختبار الاتصال عند تحميل الصفحة
+        window.onload = testDatabaseConnection;
     </script>
 </body>
 </html>
