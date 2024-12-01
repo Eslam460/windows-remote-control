@@ -1,4 +1,8 @@
-PyQt5==5.15.9
-pyrebase4==4.7.1
+pyqt5==5.15.9
 psutil==5.9.5
 pywin32==306
+Pyrebase4==4.7.1
+opencv-python==4.8.0.76
+screen-brightness-control==0.21.0
+comtypes==1.2.0
+pycaw==20230407

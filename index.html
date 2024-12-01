@@ -28,11 +28,22 @@
             margin-bottom: 30px;
             font-size: 24px;
         }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .section-title {
+            font-size: 18px;
+            color: #34495e;
+            margin-bottom: 15px;
+        }
         .button {
             display: block;
             width: 100%;
             padding: 15px;
-            margin: 15px 0;
+            margin: 10px 0;
             border: none;
             border-radius: 8px;
             background-color: #3498db;
@@ -71,14 +82,95 @@
             margin-top: 10px;
             display: none;
         }
+        .slider-container {
+            margin: 15px 0;
+        }
+        .slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .camera-feed {
+            width: 100%;
+            max-width: 480px;
+            margin: 15px auto;
+            display: none;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #systemInfo {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        .info-item {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>التحكم في Windows</h1>
-        <button class="button danger" onclick="sendCommand('shutdown')">إيقاف تشغيل الجهاز</button>
-        <button class="button" onclick="sendCommand('restart')">إعادة تشغيل الجهاز</button>
-        <button class="button" onclick="sendCommand('lock')">قفل الجهاز</button>
+        
+        <div class="section">
+            <div class="section-title">التحكم في النظام</div>
+            <button class="button danger" onclick="sendCommand('shutdown')">إيقاف تشغيل الجهاز</button>
+            <button class="button" onclick="sendCommand('restart')">إعادة تشغيل الجهاز</button>
+            <button class="button" onclick="sendCommand('lock')">قفل الجهاز</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">التحكم في الشاشة</div>
+            <button class="button" onclick="sendCommand('monitor_off')">إيقاف الشاشة</button>
+            <button class="button" onclick="sendCommand('monitor_on')">تشغيل الشاشة</button>
+            <div class="slider-container">
+                <label>السطوع:</label>
+                <input type="range" class="slider" min="0" max="100" value="50" oninput="setBrightness(this.value)">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">التحكم في الصوت</div>
+            <div class="slider-container">
+                <label>مستوى الصوت:</label>
+                <input type="range" class="slider" min="0" max="100" value="50" oninput="setVolume(this.value)">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">الكاميرا</div>
+            <button class="button" onclick="toggleCamera()">تشغيل/إيقاف الكاميرا</button>
+            <div id="cameraFeed" class="camera-feed">
+                <img id="cameraImage" style="width: 100%;">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">معلومات النظام</div>
+            <button class="button" onclick="getSystemInfo()">تحديث معلومات النظام</button>
+            <div id="systemInfo">
+                <div class="info-item">
+                    <span>المعالج:</span>
+                    <span id="cpuInfo">-</span>
+                </div>
+                <div class="info-item">
+                    <span>الذاكرة:</span>
+                    <span id="memoryInfo">-</span>
+                </div>
+                <div class="info-item">
+                    <span>القرص الصلب:</span>
+                    <span id="diskInfo">-</span>
+                </div>
+                <div class="info-item">
+                    <span>البطارية:</span>
+                    <span id="batteryInfo">-</span>
+                </div>
+            </div>
+        </div>
+
         <div class="status" id="status"></div>
         <div class="error" id="error"></div>
     </div>
@@ -95,40 +187,22 @@
             measurementId: "G-LVBGZ3Z2FS"
         };
 
-        // تهيئة Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        
+        let isCameraOn = false;
+        let cameraInterval = null;
+
         function updateStatus(message) {
             const statusElement = document.getElementById('status');
             statusElement.textContent = message;
             statusElement.style.display = 'block';
-            setTimeout(() => {
-                statusElement.style.display = 'none';
-            }, 3000);
         }
 
         function showError(error) {
             const errorElement = document.getElementById('error');
-            errorElement.textContent = 'خطأ: ' + error.message;
+            errorElement.textContent = 'خطأ: ' + (error.message || error);
             errorElement.style.display = 'block';
-            setTimeout(() => {
-                errorElement.style.display = 'none';
-            }, 5000);
-        }
-
-        async function testDatabaseConnection() {
-            try {
-                const testRef = database.ref('.info/connected');
-                const snapshot = await testRef.once('value');
-                if (snapshot.val() === true) {
-                    updateStatus('متصل بقاعدة البيانات');
-                } else {
-                    throw new Error('غير متصل بقاعدة البيانات');
-                }
-            } catch (error) {
-                showError(error);
-            }
+            console.error('Error details:', error);
         }
 
         async function sendCommand(command) {
@@ -143,13 +217,87 @@
                     updateStatus('تم إرسال الأمر بنجاح');
                 } catch (error) {
                     showError(error);
-                    console.error('Error details:', error);
                 }
             }
         }
 
+        function setBrightness(value) {
+            sendCommand(`set_brightness_${value}`);
+        }
+
+        function setVolume(value) {
+            sendCommand(`set_volume_${value}`);
+        }
+
+        function toggleCamera() {
+            isCameraOn = !isCameraOn;
+            const cameraFeed = document.getElementById('cameraFeed');
+            
+            if (isCameraOn) {
+                sendCommand('start_camera');
+                cameraFeed.style.display = 'block';
+                startCameraFeed();
+            } else {
+                sendCommand('stop_camera');
+                cameraFeed.style.display = 'none';
+                stopCameraFeed();
+            }
+        }
+
+        function startCameraFeed() {
+            if (cameraInterval) clearInterval(cameraInterval);
+            cameraInterval = setInterval(updateCameraFrame, 100);
+        }
+
+        function stopCameraFeed() {
+            if (cameraInterval) {
+                clearInterval(cameraInterval);
+                cameraInterval = null;
+            }
+        }
+
+        function updateCameraFrame() {
+            database.ref('camera_feed/frame').once('value')
+                .then(snapshot => {
+                    const frameData = snapshot.val();
+                    if (frameData) {
+                        document.getElementById('cameraImage').src = 'data:image/jpeg;base64,' + frameData;
+                    }
+                });
+        }
+
+        function getSystemInfo() {
+            sendCommand('get_system_info');
+            const systemInfo = document.getElementById('systemInfo');
+            systemInfo.style.display = 'block';
+            
+            database.ref('system_info').on('value', snapshot => {
+                const info = snapshot.val();
+                if (info) {
+                    document.getElementById('cpuInfo').textContent = `${info.cpu_percent}%`;
+                    document.getElementById('memoryInfo').textContent = `${info.memory_percent}%`;
+                    document.getElementById('diskInfo').textContent = `${info.disk_percent}%`;
+                    document.getElementById('batteryInfo').textContent = 
+                        info.battery_percent === "N/A" ? "غير متوفر" : `${info.battery_percent}%`;
+                }
+            });
+        }
+
         // اختبار الاتصال عند تحميل الصفحة
-        window.onload = testDatabaseConnection;
+        window.onload = function() {
+            try {
+                const testRef = database.ref('.info/connected');
+                testRef.on('value', snapshot => {
+                    if (snapshot.val() === true) {
+                        updateStatus('متصل بقاعدة البيانات');
+                    } else {
+                        throw new Error('غير متصل بقاعدة البيانات');
+                    }
+                });
+            } catch (error) {
+                showError(error);
+            }
+        };
     </script>
 </body>
 </html>
